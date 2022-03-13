@@ -128,9 +128,9 @@ private object AnonymousFeedback {
 		buildString {
 			val errorDescription = details.remove("error.description").orEmpty()
 			val stackTrace = details.remove("error.stacktrace")?.takeIf(String::isNotBlank) ?: "invalid stacktrace"
-			if (errorDescription.isNotEmpty()) append(errorDescription).appendln("\n\n----------------------\n")
-			for ((key, value) in details) append("- ").append(key).append(": ").appendln(value)
-			if (includeStacktrace) appendln("\n```").appendln(stackTrace).appendln("```")
+			if (errorDescription.isNotEmpty()) append(errorDescription).appendLine("\n\n----------------------\n")
+			for ((key, value) in details) append("- ").append(key).append(": ").appendLine(value)
+			if (includeStacktrace) appendLine("\n```").appendLine(stackTrace).appendLine("```")
 		}
 }
 
@@ -163,10 +163,10 @@ private fun encrypt(value: String): String {
 class GitHubErrorReporter : ErrorReportSubmitter() {
 	override fun getReportActionText() = ErrorReportBundle.message("report.error.to.plugin.vendor")
 	override fun submit(
-		events: Array<IdeaLoggingEvent>,
+		events: Array<out IdeaLoggingEvent>,
 		info: String?,
 		parent: Component,
-		consumer: Consumer<SubmittedReportInfo>): Boolean {
+		consumer: Consumer<in SubmittedReportInfo>): Boolean {
 		// TODO improve
 		val event = events.firstOrNull { it.throwable != null } ?: return false
 		return doSubmit(event, parent, consumer, info)
@@ -175,7 +175,7 @@ class GitHubErrorReporter : ErrorReportSubmitter() {
 	private fun doSubmit(
 		event: IdeaLoggingEvent,
 		parent: Component,
-		callback: Consumer<SubmittedReportInfo>,
+		callback: Consumer<in SubmittedReportInfo>,
 		description: String?): Boolean {
 		val dataContext = DataManager.getInstance().getDataContext(parent)
 		val bean = GitHubErrorBean(
@@ -199,7 +199,7 @@ class GitHubErrorReporter : ErrorReportSubmitter() {
 	}
 
 	internal class CallbackWithNotification(
-		private val consumer: Consumer<SubmittedReportInfo>,
+		private val consumer: Consumer<in SubmittedReportInfo>,
 		private val project: Project?) : Consumer<SubmittedReportInfo> {
 		override fun consume(reportInfo: SubmittedReportInfo) {
 			consumer.consume(reportInfo)

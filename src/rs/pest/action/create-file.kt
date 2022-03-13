@@ -22,7 +22,7 @@ class NewPestFile : CreateFileFromTemplateAction(
 		fun createProperties(project: Project, className: String): Properties {
 			val properties = FileTemplateManager.getInstance(project).defaultProperties
 			properties += "NAME" to className
-			properties += "NAME_SNAKE" to className.toLowerCase().replace(Regex("[ \r\t-()!@#~]+"), "_")
+			properties += "NAME_SNAKE" to className.lowercase().replace(Regex("[ \r\t-()!@#~]+"), "_")
 			return properties
 		}
 	}

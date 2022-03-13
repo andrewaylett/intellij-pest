@@ -12,7 +12,7 @@ import rs.pest.psi.impl.PestGrammarRuleMixin
 
 class PestRecursionLineMarkerProvider : LineMarkerProvider {
 	override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
-	override fun collectSlowLineMarkers(elements: List<PsiElement>, result: MutableCollection<LineMarkerInfo<*>>) {
+	override fun collectSlowLineMarkers(elements: List<PsiElement>, result: MutableCollection<in LineMarkerInfo<*>>) {
 		elements
 			.asSequence()
 			.filterIsInstance<PestGrammarRuleMixin>()
@@ -26,7 +26,8 @@ class PestRecursionLineMarkerProvider : LineMarkerProvider {
 private class RecMarkerInfo internal constructor(id: PsiElement) : LineMarkerInfo<PsiElement>(
 	id, id.textRange, AllIcons.Gutter.RecursiveMethod, Pass.LINE_MARKERS,
 	FunctionUtil.constant("Recursive rule"), null,
-	GutterIconRenderer.Alignment.RIGHT) {
+	GutterIconRenderer.Alignment.RIGHT
+) {
 	override fun createGutterRenderer(): LineMarkerGutterIconRenderer<PsiElement>? =
 		if (myIcon == null) null else object : LineMarkerGutterIconRenderer<PsiElement>(this) {
 			override fun getClickAction(): AnAction? = null

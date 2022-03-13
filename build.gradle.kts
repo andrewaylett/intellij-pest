@@ -1,6 +1,6 @@
 import de.undercouch.gradle.tasks.download.Download
-import org.jetbrains.grammarkit.tasks.GenerateLexer
-import org.jetbrains.grammarkit.tasks.GenerateParser
+import org.jetbrains.grammarkit.tasks.GenerateLexerTask
+import org.jetbrains.grammarkit.tasks.GenerateParserTask
 import org.jetbrains.intellij.tasks.PatchPluginXmlTask
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -10,7 +10,7 @@ import java.nio.file.Paths
 val isCI = !System.getenv("CI").isNullOrBlank()
 val commitHash = Runtime.getRuntime().exec("git rev-parse --short HEAD").run {
 	waitFor()
-	val output = inputStream.use { inputStream.use { it.readBytes().let(::String) } }
+	val output = inputStream.bufferedReader().use { it.readLine() }
 	destroy()
 	output.trim()
 }
@@ -26,10 +26,11 @@ version = pluginVersion
 
 plugins {
 	java
-	id("org.jetbrains.intellij") version "0.4.18"
-	id("org.jetbrains.grammarkit") version "2020.1.2"
-	id("de.undercouch.download") version "4.0.4"
-	kotlin("jvm") version "1.3.72"
+	id("org.jetbrains.intellij") version "1.4.0"
+	id("org.jetbrains.grammarkit") version "2021.2.1"
+	id("de.undercouch.download") version "5.0.2"
+	kotlin("jvm") version "1.6.10"
+	idea
 }
 
 allprojects { apply { plugin("org.jetbrains.grammarkit") } }
@@ -43,45 +44,49 @@ fun fromToolbox(root: String, ide: String) = file(root)
 	.filterNotNull()
 	.filter { it.isDirectory }
 	.filterNot { it.name.endsWith(".plugins") }
-	.maxBy {
+	.maxByOrNull {
 		val (major, minor, patch) = it.name.split('.')
 		String.format("%5s%5s%5s", major, minor, patch)
 	}
 	?.also { println("Picked: $it") }
 
 intellij {
-	updateSinceUntilBuild = false
-	instrumentCode = true
-	val user = System.getProperty("user.name")
-	val os = System.getProperty("os.name")
-	val root = when {
-		os.startsWith("Windows") -> "C:\\Users\\$user\\AppData\\Local\\JetBrains\\Toolbox\\apps"
-		os == "Linux" -> "/home/$user/.local/share/JetBrains/Toolbox/apps"
-		else -> return@intellij
-	}
-	val intellijPath = sequenceOf("IDEA-C", "IDEA-U")
-		.mapNotNull { fromToolbox(root, it) }.firstOrNull()
-	intellijPath?.absolutePath?.let { localPath = it }
-	val pycharmPath = sequenceOf("IDEA-C", "PyCharm-C", "IDEA-U")
-		.mapNotNull { fromToolbox(root, it) }.firstOrNull()
-	pycharmPath?.absolutePath?.let { alternativeIdePath = it }
+	updateSinceUntilBuild.value(false)
+	instrumentCode.value(true)
+	plugins.value(listOf("org.rust.lang:0.4.165.4438-213", "org.toml.lang:213.5744.224", "java"))
+		version.value("2021.3.2")
+}
 
-	if (!isCI) setPlugins("PsiViewer:201.6251.22-EAP-SNAPSHOT.3")
-	else version = "2020.1"
-	setPlugins("org.rust.lang:0.2.120.2202-201", "org.toml.lang:0.2.120.37-193", "java")
+idea {
+		module {
+				isDownloadSources = true
+				generatedSourceDirs.plus(file("gen"))
+		}
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_11
-	targetCompatibility = JavaVersion.VERSION_11
+		toolchain {
+				languageVersion.set(JavaLanguageVersion.of(11))
+		}
+
+		consistentResolution {
+				useCompileClasspathVersions()
+		}
 }
 
-tasks.withType<PatchPluginXmlTask> {
-	changeNotes(file("res/META-INF/change-notes.html").readText())
-	pluginDescription(file("res/META-INF/description.html").readText())
-	version(pluginVersion)
-	pluginId(packageName)
+gradleEnterprise {
+		buildScan {
+				termsOfServiceUrl = "https://gradle.com/terms-of-service"
+				termsOfServiceAgree = "yes"
+		}
 }
+
+//tasks.withType<PatchPluginXmlTask> {
+//	changeNotes(file("res/META-INF/change-notes.html").readText())
+//	pluginDescription(file("res/META-INF/description.html").readText())
+//	version(pluginVersion)
+//	pluginId(packageName)
+//}
 
 sourceSets {
 	main {
@@ -101,20 +106,25 @@ sourceSets {
 
 repositories {
 	mavenCentral()
-	jcenter()
+	maven { url = uri("https://repo.eclipse.org/content/groups/releases/")}
+	maven { url = uri("https://www.jetbrains.com/intellij-repository/releases") }
+	maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
+  google()
 }
 
 dependencies {
 	implementation(kotlin("stdlib-jdk8"))
-	implementation("org.eclipse.mylyn.github", "org.eclipse.egit.github.core", "2.1.5") {
-		exclude(module = "gson")
-	}
-	implementation("org.jetbrains.kotlinx", "kotlinx-html-jvm", "0.7.1") {
-		exclude(module = "kotlin-stdlib")
-	}
+	implementation("org.eclipse.mylyn.github", "org.eclipse.egit.github.core", "2.1.5")
+	implementation("org.jetbrains.kotlinx", "kotlinx-html-jvm", "0.7.3")
 	implementation(files("$projectDir/rust/target/java"))
 	testImplementation(kotlin("test-junit"))
-	testImplementation("junit", "junit", "4.12")
+	testImplementation("junit", "junit")
+}
+
+configurations.all {
+  resolutionStrategy {
+    failOnNonReproducibleResolution()
+  }
 }
 
 task("displayCommitHash") {
@@ -206,33 +216,33 @@ val compileWasm = task<Exec>("compileWasm") {
 
 fun path(more: Iterable<*>) = more.joinToString(File.separator)
 
-val genParser = task<GenerateParser>("genParser") {
+val genParser = task<GenerateParserTask>("genParser") {
 	group = tasks["init"].group!!
 	description = "Generate the Parser and PsiElement classes"
-	source = "grammar/pest.bnf"
-	targetRoot = "gen/"
+	source.value("grammar/pest.bnf")
+	targetRoot.value("gen/")
 	val parserRoot = Paths.get("rs", "pest")
-	pathToParser = path(parserRoot + "PestParser.java")
-	pathToPsiRoot = path(parserRoot + "psi")
-	purgeOldFiles = true
+	pathToParser.value(path(parserRoot + "PestParser.java"))
+	pathToPsiRoot.value(path(parserRoot + "psi"))
+	purgeOldFiles.value(true)
 }
 
-val genLexer = task<GenerateLexer>("genLexer") {
+val genLexer = task<GenerateLexerTask>("genLexer") {
 	group = genParser.group
 	description = "Generate the Lexer"
-	source = "grammar/pest.flex"
-	targetDir = path(Paths.get("gen", "rs", "pest", "psi"))
-	targetClass = "PestLexer"
-	purgeOldFiles = true
+	source.value("grammar/pest.flex")
+	targetDir.value(path(Paths.get("gen", "rs", "pest", "psi")))
+	targetClass.value("PestLexer")
+	purgeOldFiles.value(true)
 	dependsOn(genParser)
 }
 
 tasks.withType<KotlinCompile> {
 	dependsOn(genParser, genLexer, compileWasm)
 	kotlinOptions {
-		jvmTarget = "1.8"
-		languageVersion = "1.3"
-		apiVersion = "1.3"
+		jvmTarget = "11"
+		languageVersion = "1.6"
+		apiVersion = "1.6"
 		freeCompilerArgs = listOf("-Xjvm-default=enable")
 	}
 }
