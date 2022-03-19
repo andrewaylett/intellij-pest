@@ -43,7 +43,7 @@ class PestLivePreviewToHtmlAction : AnAction() {
 
 	override fun actionPerformed(e: AnActionEvent) {
 		val file = CommonDataKeys.PSI_FILE.getData(e.dataContext) as? LivePreviewFile ?: return
-		ProgressManager.getInstance().run(object : Task.Backgroundable(file.project, "HTML Generation", true, PerformInBackgroundOption.ALWAYS_BACKGROUND) {
+		ProgressManager.getInstance().run(object : Task.Backgroundable(file.project, "HTML generation", true, PerformInBackgroundOption.ALWAYS_BACKGROUND) {
 			override fun run(indicator: ProgressIndicator) {
 				val startTime = System.currentTimeMillis()
 				defaultPreviewToHtml(file, indicator)

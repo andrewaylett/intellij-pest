@@ -31,6 +31,7 @@ plugins {
 	id("de.undercouch.download") version "5.0.2"
 	kotlin("jvm") version "1.6.10"
 	idea
+    id("com.diffplug.spotless") version "6.3.0"
 }
 
 allprojects { apply { plugin("org.jetbrains.grammarkit") } }
@@ -71,13 +72,6 @@ java {
 
 		consistentResolution {
 				useCompileClasspathVersions()
-		}
-}
-
-gradleEnterprise {
-		buildScan {
-				termsOfServiceUrl = "https://gradle.com/terms-of-service"
-				termsOfServiceAgree = "yes"
 		}
 }
 

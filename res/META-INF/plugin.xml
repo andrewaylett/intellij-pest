@@ -60,6 +60,7 @@
 		<lang.elementManipulator
 			forClass="rs.pest.psi.impl.PestStringMixin"
 			implementationClass="rs.pest.psi.PestStringManipulator"/>
+        <notificationGroup displayType="BALLOON" id="HTML Export" />
 	</extensions>
 
 	<actions>

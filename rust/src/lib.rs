@@ -3,8 +3,8 @@
 
 This is a bridge library for the [IntelliJ IDEA plugin for Pest][jb].
 
- [jb]: https://plugins.jetbrains.com/plugin/12046-pest
- [asmble]:https://github.com/cretz/asmble
+    [jb]: https://plugins.jetbrains.com/plugin/12046-pest
+    [asmble]:https://github.com/cretz/asmble
 
 It's supposed to be compiled only with the wasm32 backend of nightly rustc
 (at least at this moment).
@@ -14,6 +14,28 @@ loaded in the plugin.
 Thus no JNI.
 */
 
+#![deny(
+    bad_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    missing_debug_implementations,
+    no_mangle_generic_items,
+    non_shorthand_field_patterns,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    private_in_public,
+    unconditional_recursion,
+    unreachable_pub,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true,
+    clippy::expect_used
+)]
+#![deny(unsafe_op_in_unsafe_fn)]
 #![feature(box_syntax, box_patterns)]
 
 use std::alloc::System;
@@ -100,7 +122,11 @@ fn convert_error(error: Error<Rule>, grammar: &str) -> String {
 
 #[no_mangle]
 /// Load the Pest VM as a global variable.
-pub extern "C" fn load_vm(pest_code: JavaStr, pest_code_len: i32) -> JavaStr {
+///
+/// # Safety
+///
+/// We rely on the caller passing in valid strings
+pub unsafe extern "C" fn load_vm(pest_code: JavaStr, pest_code_len: i32) -> JavaStr {
     let pest_code_len = pest_code_len as usize;
     let pest_code_bytes =
         unsafe { Vec::<u8>::from_raw_parts(pest_code, pest_code_len, pest_code_len) };
@@ -136,7 +162,7 @@ pub extern "C" fn load_vm(pest_code: JavaStr, pest_code_len: i32) -> JavaStr {
     let pairs = match pest_code_result {
         Ok(pairs) => pairs,
         Err(err) => {
-            let cstr = CString::new(format!("Err[{:?}]", convert_error(err, &pest_code))).unwrap();
+            let cstr = CString::new(format!("Err[{:?}]", convert_error(err, pest_code))).unwrap();
             let ptr = cstr.as_ptr() as *mut _;
             mem::forget(pest_code_bytes);
             mem::forget(cstr);
@@ -149,7 +175,7 @@ pub extern "C" fn load_vm(pest_code: JavaStr, pest_code_len: i32) -> JavaStr {
             "Err{:?}",
             errors
                 .into_iter()
-                .map(|e| convert_error(e, &pest_code))
+                .map(|e| convert_error(e, pest_code))
                 .collect::<Vec<_>>()
         ))
         .unwrap();
@@ -166,7 +192,7 @@ pub extern "C" fn load_vm(pest_code: JavaStr, pest_code_len: i32) -> JavaStr {
                 "Err{:?}",
                 errors
                     .into_iter()
-                    .map(|e| convert_error(e, &pest_code))
+                    .map(|e| convert_error(e, pest_code))
                     .collect::<Vec<_>>()
             ))
             .unwrap();
@@ -205,7 +231,11 @@ fn join_pairs(result: &mut Vec<String>, pair: Pair<&str>) {
 /// After loading the VM, this function can parse the code with the
 /// currently loaded VM.
 /// Assumes the VM is already loaded, otherwise it'll panic.
-pub extern "C" fn render_code(
+///
+/// # Safety
+///
+/// We rely on the caller passing in valid strings
+pub unsafe extern "C" fn render_code(
     rule_name: JavaStr,
     rule_name_len: i32,
     user_code: JavaStr,

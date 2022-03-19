@@ -246,4 +246,3 @@ range     ::= character RANGE_OPERATOR character {
 	extends=expression
 	pin=2
 }
-
