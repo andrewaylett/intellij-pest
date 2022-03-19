@@ -27,6 +27,8 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
+    - name: Install Nightly Rust
+      run: rustup install nightly
     - name: Build with Gradle
       uses: gradle/gradle-build-action@937999e9cc2425eddc7fd62d1053baf041147db7
       with:
