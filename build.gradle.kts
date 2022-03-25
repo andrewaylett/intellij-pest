@@ -75,12 +75,12 @@ java {
 		}
 }
 
-//tasks.withType<PatchPluginXmlTask> {
-//	changeNotes(file("res/META-INF/change-notes.html").readText())
-//	pluginDescription(file("res/META-INF/description.html").readText())
-//	version(pluginVersion)
-//	pluginId(packageName)
-//}
+tasks.withType<PatchPluginXmlTask> {
+	changeNotes.value(file("res/META-INF/change-notes.html").readText())
+	pluginDescription.value(file("res/META-INF/description.html").readText())
+	version.value(pluginVersion)
+	pluginId.value(packageName)
+}
 
 sourceSets {
 	main {
@@ -103,7 +103,7 @@ repositories {
 	maven { url = uri("https://repo.eclipse.org/content/groups/releases/")}
 	maven { url = uri("https://www.jetbrains.com/intellij-repository/releases") }
 	maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
-  google()
+    google()
 }
 
 dependencies {
@@ -240,3 +240,5 @@ tasks.withType<KotlinCompile> {
 		freeCompilerArgs = listOf("-Xjvm-default=enable")
 	}
 }
+
+tasks.getByName("processResources").dependsOn(compileWasm)
