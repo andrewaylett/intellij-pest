@@ -1,6 +1,6 @@
 <idea-plugin>
 	<name>Pest</name>
-	<vendor email="ice1000kotlin@foxmail.com" url="https://ice1000.org">ice1000</vendor>
+	<vendor email="andrew@aylett.co.uk" url="https://www.aylett.co.uk">Andrew Aylett</vendor>
 	<idea-version since-build="201.6666"/>
 
 	<depends>com.intellij.modules.lang</depends>

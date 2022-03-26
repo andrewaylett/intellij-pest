@@ -17,7 +17,7 @@ val commitHash = Runtime.getRuntime().exec("git rev-parse --short HEAD").run {
 
 val pluginComingVersion = "0.3.3"
 val pluginVersion = if (isCI) "$pluginComingVersion-$commitHash" else pluginComingVersion
-val packageName = "rs.pest"
+val packageName = "eu.aylett.pest"
 val asmble = "asmble"
 val rustTarget = projectDir.resolve("rust").resolve("target")
 
@@ -84,13 +84,15 @@ tasks.withType<PatchPluginXmlTask> {
 
 sourceSets {
 	main {
-		withConvention(KotlinSourceSet::class) {
-			listOf(java, kotlin).forEach { it.srcDirs("src", "gen") }
-		}
-		resources.srcDirs("res", rustTarget.resolve("java").absolutePath)
+		@Suppress("DEPRECATION")
+        withConvention(KotlinSourceSet::class) {
+            listOf(java, kotlin).forEach { it.srcDirs("src", "gen") }
+        }
+        resources.srcDirs("res", rustTarget.resolve("java").absolutePath)
 	}
 
 	test {
+        @Suppress("DEPRECATION")
 		withConvention(KotlinSourceSet::class) {
 			listOf(java, kotlin).forEach { it.srcDirs("test") }
 		}
