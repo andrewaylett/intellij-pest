@@ -4,8 +4,11 @@ import org.jetbrains.grammarkit.tasks.GenerateParserTask
 import org.jetbrains.intellij.tasks.PatchPluginXmlTask
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.changelog.markdownToHTML
 import java.io.*
 import java.nio.file.Paths
+
+fun properties(key: String) = project.findProperty(key).toString()
 
 val isCI = !System.getenv("CI").isNullOrBlank()
 val commitHash = Runtime.getRuntime().exec("git rev-parse --short HEAD").run {
@@ -15,9 +18,9 @@ val commitHash = Runtime.getRuntime().exec("git rev-parse --short HEAD").run {
 	output.trim()
 }
 
-val pluginComingVersion = "0.3.3"
+val pluginComingVersion = properties("pluginVersion")
 val pluginVersion = if (isCI) "$pluginComingVersion-$commitHash" else pluginComingVersion
-val packageName = "eu.aylett.pest"
+val packageName = properties("pluginGroup")
 val asmble = "asmble"
 val rustTarget = projectDir.resolve("rust").resolve("target")
 
@@ -27,7 +30,9 @@ version = pluginVersion
 plugins {
 	java
 	id("org.jetbrains.intellij") version "1.4.0"
+    id("org.jetbrains.changelog") version "1.3.1"
 	id("org.jetbrains.grammarkit") version "2021.2.1"
+    id("org.jetbrains.qodana") version "0.1.13"
 	id("de.undercouch.download") version "5.0.2"
 	kotlin("jvm") version "1.6.10"
 	idea
@@ -36,26 +41,25 @@ plugins {
 
 allprojects { apply { plugin("org.jetbrains.grammarkit") } }
 
-fun fromToolbox(root: String, ide: String) = file(root)
-	.resolve(ide)
-	.takeIf { it.exists() }
-	?.resolve("ch-0")
-	?.listFiles()
-	.orEmpty()
-	.filterNotNull()
-	.filter { it.isDirectory }
-	.filterNot { it.name.endsWith(".plugins") }
-	.maxByOrNull {
-		val (major, minor, patch) = it.name.split('.')
-		String.format("%5s%5s%5s", major, minor, patch)
-	}
-	?.also { println("Picked: $it") }
-
 intellij {
 	updateSinceUntilBuild.value(false)
 	instrumentCode.value(true)
 	plugins.value(listOf("org.rust.lang:0.4.165.4438-213", "org.toml.lang:213.5744.224", "java"))
     version.value("2021.3.2")
+}
+
+// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
+changelog {
+    version.set(pluginVersion)
+    groups.set(emptyList())
+}
+
+// Configure Gradle Qodana Plugin - read more: https://github.com/JetBrains/gradle-qodana-plugin
+qodana {
+    cachePath.set(projectDir.resolve(".qodana").canonicalPath)
+    reportPath.set(projectDir.resolve("build/reports/inspections").canonicalPath)
+    saveReport.set(true)
+    showReport.set(System.getenv("QODANA_SHOW_REPORT")?.toBoolean() ?: false)
 }
 
 idea {
@@ -76,12 +80,18 @@ java {
 }
 
 tasks.withType<PatchPluginXmlTask> {
-	changeNotes.value(file("res/META-INF/change-notes.html").readText())
 	pluginDescription.value(file("res/META-INF/description.html").readText())
 	version.value(pluginVersion)
 	pluginId.value(packageName)
-    sinceBuild.value("2021")
-    untilBuild.value("2022")
+    sinceBuild.value(properties("pluginSinceBuild"))
+    untilBuild.value(properties("pluginUntilBuild"))
+
+    // Get the latest available change notes from the changelog file
+    changeNotes.value(provider {
+        markdownToHTML(changelog.run {
+            pluginVersion
+        })
+    })
 }
 
 sourceSets {
