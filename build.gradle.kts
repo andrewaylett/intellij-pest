@@ -55,7 +55,7 @@ intellij {
 	updateSinceUntilBuild.value(false)
 	instrumentCode.value(true)
 	plugins.value(listOf("org.rust.lang:0.4.165.4438-213", "org.toml.lang:213.5744.224", "java"))
-		version.value("2021.3.2")
+    version.value("2021.3.2")
 }
 
 idea {
@@ -80,6 +80,8 @@ tasks.withType<PatchPluginXmlTask> {
 	pluginDescription.value(file("res/META-INF/description.html").readText())
 	version.value(pluginVersion)
 	pluginId.value(packageName)
+    sinceBuild.value("2021")
+    untilBuild.value("2022")
 }
 
 sourceSets {
